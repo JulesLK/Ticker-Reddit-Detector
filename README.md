@@ -18,10 +18,16 @@ périmètre de cet outil.
 2. **Prix/volume** : récupérés via `yfinance` (Yahoo Finance). Les week-ends
    (marché fermé) sont rattachés au prix/volume de clôture du vendredi
    précédent.
-3. **Détection** (par ticker, dès qu'il a assez d'historique) :
+3. **Détection** (par ticker, dès qu'il a assez d'historique) — 5 conditions :
    - hausse de mentions **progressive** : aucun jour ne doit représenter une
      part disproportionnée de la hausse (z-score du delta journalier par
      rapport à la baseline propre du ticker) ;
+   - progression **progressive** dans le classement ApeWisdom (même logique
+     appliquée au rang plutôt qu'au volume de mentions — capte un ticker qui
+     gagne en importance relative, pas seulement en volume brut) ;
+   - qualité d'engagement stable : le ratio upvotes/mentions ne doit pas
+     s'effondrer par rapport à sa propre baseline (signe possible de
+     mentions "creuses"/spam plutôt que d'une vraie conviction communautaire) ;
    - prix et volume restent dans une plage normale par rapport à la
      volatilité historique propre du ticker ;
    - un ticker qui casse une condition ou sort du classement ApeWisdom est
@@ -52,8 +58,9 @@ incomplète.
 | `baseline_days` | Période de calcul de la normalité propre au ticker (doit être ≥ `window_days`) |
 | `universe` | Filtre ApeWisdom scanné chaque jour |
 | `max_pages` | Garde-fou sur la pagination ApeWisdom |
-| `anomaly_sensitivity` | Seuil (en z-score) de hausse de mentions disproportionnée sur un seul jour |
+| `anomaly_sensitivity` | Seuil (en z-score) de hausse disproportionnée sur un seul jour, pour les mentions et pour le rang ApeWisdom |
 | `price_volatility_sensitivity` | Seuil (en z-score) de mouvement de prix/volume anormal |
+| `engagement_sensitivity` | Seuil (en z-score) de chute anormale du ratio upvotes/mentions |
 | `run_time` | Heure UTC visée pour la collecte quotidienne |
 | `early_trend_min_days` | Historique minimum pour signaler une "tendance naissante" avant fin de fenêtre |
 

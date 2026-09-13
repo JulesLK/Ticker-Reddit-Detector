@@ -1,7 +1,9 @@
 """Coeur de la détection : hausse de mentions progressive (pas de jour qui
-domine, anomalie mesurée en z-score propre au ticker) + prix/volume restant
-dans la volatilité normale du ticker. Aucune blacklist permanente : un ticker
-est réévalué à chaque run à partir de son historique brut, qui n'est jamais
+domine, anomalie mesurée en z-score propre au ticker), progression du
+classement ApeWisdom elle aussi progressive, qualité d'engagement
+(upvotes/mentions) qui ne s'effondre pas, et prix/volume restant dans la
+volatilité normale du ticker. Aucune blacklist permanente : un ticker est
+réévalué à chaque run à partir de son historique brut, qui n'est jamais
 purgé par ce module."""
 
 import statistics
@@ -36,6 +38,10 @@ class TickerEvaluation:
     is_early_trend: bool = False
     mentions_series: list = field(default_factory=list)
     price_series: list = field(default_factory=list)
+    rank_start: int = None
+    rank_end: int = None
+    engagement_window_avg: float = None
+    engagement_baseline_avg: float = None
 
 
 def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
@@ -128,9 +134,43 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
             f"Volume anormal dans la fenêtre (z={volume_check['worst_z']:.1f})"
         )
 
+    # Progression dans le classement ApeWisdom : rang plus bas = meilleur, donc
+    # on travaille sur -rang pour réutiliser le même détecteur "progressif" que
+    # pour les mentions (pas de bond de classement en un seul jour).
+    baseline_rank_scores = [-m["rank"] for m in mentions_history[-required_days:]]
+    window_rank_scores = [-m["rank"] for m in mentions_history[-(cfg.window_days + 1):]]
+    rank_check = _is_progressive(window_rank_scores, baseline_rank_scores, cfg.anomaly_sensitivity)
+
+    if rank_check["net_rise"] <= 0:
+        reasons.append("Le classement ApeWisdom ne progresse pas sur la fenêtre")
+    if not rank_check["progressive"]:
+        reasons.append(
+            f"Progression de rang concentrée sur un seul jour (z={rank_check['worst_z']:.1f})"
+        )
+
+    # Qualité d'engagement : upvotes par mention. On ne pénalise qu'un
+    # effondrement (mentions "creuses"), pas une hausse de qualité.
+    def _engagement_ratio(m):
+        return (m["upvotes"] / m["mentions"]) if m["mentions"] else 0.0
+
+    baseline_engagement = [_engagement_ratio(m) for m in mentions_history[-required_days:]]
+    window_engagement = [_engagement_ratio(m) for m in mentions_history[-(cfg.window_days + 1):]]
+    engagement_check = _has_no_quality_collapse(
+        window_engagement, baseline_engagement, cfg.engagement_sensitivity
+    )
+
+    if not engagement_check["ok"]:
+        reasons.append(
+            f"Qualité d'engagement en chute anormale, mentions possiblement creuses "
+            f"(z={engagement_check['worst_z']:.1f})"
+        )
+
     qualifies = (
         mention_check["net_rise"] > 0
         and mention_check["progressive"]
+        and rank_check["net_rise"] > 0
+        and rank_check["progressive"]
+        and engagement_check["ok"]
         and price_check["stable"]
         and volume_check["stable"]
     )
@@ -143,6 +183,10 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
         reasons=reasons,
         mentions_series=mentions_history,
         price_series=price_history,
+        rank_start=mentions_history[-(cfg.window_days + 1)]["rank"],
+        rank_end=mentions_history[-1]["rank"],
+        engagement_window_avg=statistics.mean(window_engagement) if window_engagement else None,
+        engagement_baseline_avg=statistics.mean(baseline_engagement) if baseline_engagement else None,
     )
 
 
@@ -186,6 +230,20 @@ def _is_stable(window_values, baseline_values, sensitivity, use_returns):
 
     worst_z = max(abs(z) for z in z_scores)
     return {"stable": worst_z <= sensitivity, "worst_z": worst_z}
+
+
+def _has_no_quality_collapse(window_values, baseline_values, sensitivity):
+    """Rejette seulement une chute anormale (mentions potentiellement creuses),
+    jamais une hausse de qualité — contrairement à _is_stable qui est
+    symétrique."""
+    mean_v, std_v = _mean_std(baseline_values)
+    z_scores = [(v - mean_v) / std_v for v in window_values]
+
+    if not z_scores:
+        return {"ok": True, "worst_z": 0.0}
+
+    worst_z = min(z_scores)
+    return {"ok": worst_z >= -sensitivity, "worst_z": worst_z}
 
 
 def _pct_changes(values):

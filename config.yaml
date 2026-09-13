@@ -23,9 +23,10 @@ universe: "all-stocks"
 # l'API paginė ~100 tickers/page). Mettre une valeur haute pour "tout" le classement.
 max_pages: 20
 
-# Sensibilité du test d'anomalie sur la hausse des mentions.
-# Le delta mentions jour/jour est transformé en z-score par rapport à la
-# baseline propre du ticker (moyenne/écart-type des deltas sur baseline_days).
+# Sensibilité du test d'anomalie sur la hausse des mentions ET sur la
+# progression dans le classement ApeWisdom (même logique appliquée aux deux).
+# Le delta jour/jour est transformé en z-score par rapport à la baseline
+# propre du ticker (moyenne/écart-type des deltas sur baseline_days).
 # Un ticker est rejeté si au moins un jour de la fenêtre dépasse ce seuil
 # (= un seul jour explique une part disproportionnée de la hausse totale).
 anomaly_sensitivity: 2.5
@@ -33,6 +34,12 @@ anomaly_sensitivity: 2.5
 # Sensibilité du test de stabilité prix/volume, même principe en z-score
 # mais appliqué au rendement journalier et au volume du ticker.
 price_volatility_sensitivity: 2.5
+
+# Sensibilité du test de qualité d'engagement (ratio upvotes/mentions).
+# Rejette un ticker si ce ratio s'effondre par rapport à sa propre baseline
+# pendant la fenêtre (signe possible de mentions "creuses"/spam plutôt que
+# d'une vraie conviction communautaire).
+engagement_sensitivity: 2.5
 
 # Heure d'exécution quotidienne visée (UTC, format HH:MM). Le workflow GitHub
 # Actions tourne toutes les heures et ne déclenche la collecte réelle que

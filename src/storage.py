@@ -109,7 +109,7 @@ def get_distinct_dates(conn):
 
 
 def get_ticker_mentions_history(conn, ticker, limit_days=None):
-    q = "SELECT date, mentions FROM mentions_snapshot WHERE ticker = ? ORDER BY date"
+    q = "SELECT date, mentions, rank, upvotes FROM mentions_snapshot WHERE ticker = ? ORDER BY date"
     rows = conn.execute(q, (ticker,)).fetchall()
     rows = [dict(r) for r in rows]
     if limit_days:

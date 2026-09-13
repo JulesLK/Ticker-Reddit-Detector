@@ -19,6 +19,7 @@ class Config:
     max_pages: int
     anomaly_sensitivity: float
     price_volatility_sensitivity: float
+    engagement_sensitivity: float
     run_time: str
     early_trend_min_days: int
 
@@ -38,6 +39,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         max_pages=int(raw["max_pages"]),
         anomaly_sensitivity=float(raw["anomaly_sensitivity"]),
         price_volatility_sensitivity=float(raw["price_volatility_sensitivity"]),
+        engagement_sensitivity=float(raw["engagement_sensitivity"]),
         run_time=str(raw["run_time"]),
         early_trend_min_days=int(raw["early_trend_min_days"]),
     )

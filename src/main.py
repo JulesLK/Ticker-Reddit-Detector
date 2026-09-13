@@ -104,7 +104,7 @@ def main():
         print(f"Dashboard régénéré : {DASHBOARD_PATH}")
 
         qualifying = [t for t, e in evaluations.items() if e.status == "qualifies"]
-        print("\n=== Tickers validant les 3 conditions aujourd'hui ===")
+        print("\n=== Tickers validant toutes les conditions aujourd'hui ===")
         if qualifying:
             for t in qualifying:
                 print(f" - {t}")

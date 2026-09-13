@@ -57,6 +57,27 @@ def _sparkline_svg(mentions_series, price_series, width=260, height=70):
     return "".join(svg)
 
 
+def _logo_url(ticker):
+    safe = "".join(c for c in ticker if c.isalnum())
+    return f"https://financialmodelingprep.com/image-stock/{safe}.png"
+
+
+def _rank_html(evaluation):
+    if evaluation.rank_start is None or evaluation.rank_end is None:
+        return ""
+    arrow = "▲" if evaluation.rank_end < evaluation.rank_start else "▼" if evaluation.rank_end > evaluation.rank_start else "→"
+    return f'<div class="meta-line">Rang ApeWisdom : #{evaluation.rank_start} {arrow} #{evaluation.rank_end}</div>'
+
+
+def _engagement_html(evaluation):
+    if evaluation.engagement_window_avg is None or evaluation.engagement_baseline_avg is None:
+        return ""
+    return (
+        f'<div class="meta-line">Engagement (upvotes/mention) : '
+        f'{evaluation.engagement_window_avg:.1f} (baseline {evaluation.engagement_baseline_avg:.1f})</div>'
+    )
+
+
 def _card(ticker, evaluation, highlight_class=""):
     reasons_html = ""
     if evaluation.reasons:
@@ -65,14 +86,20 @@ def _card(ticker, evaluation, highlight_class=""):
 
     spark = _sparkline_svg(evaluation.mentions_series, evaluation.price_series)
     last_mentions = evaluation.mentions_series[-1]["mentions"] if evaluation.mentions_series else "-"
+    logo_url = _logo_url(ticker)
 
     return f"""
     <div class="card {highlight_class}">
         <div class="card-header">
-            <span class="ticker">{html.escape(ticker)}</span>
+            <span class="ticker-group">
+                <img class="logo" src="{logo_url}" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">{html.escape(ticker)}</span>
+            </span>
             <span class="mentions-count">{last_mentions} mentions</span>
         </div>
         <div class="sparkline">{spark}</div>
+        {_rank_html(evaluation)}
+        {_engagement_html(evaluation)}
         {reasons_html}
     </div>
     """
@@ -104,7 +131,7 @@ def render_dashboard(cfg, last_collection, days_collected_global, tracked_count,
     qualifying_html = (
         "".join(_card(t, e, "highlight-qualify") for t, e in qualifying.items())
         if qualifying
-        else '<p class="empty">Aucun ticker ne valide les 3 conditions aujourd\'hui.</p>'
+        else '<p class="empty">Aucun ticker ne valide toutes les conditions aujourd\'hui.</p>'
     )
     early_trend_html = (
         "".join(_card(t, e, "highlight-early") for t, e in early_trend.items())
@@ -186,10 +213,13 @@ def render_dashboard(cfg, last_collection, days_collected_global, tracked_count,
   }}
   .card.highlight-qualify {{ border-color: var(--good); box-shadow: 0 0 0 1px var(--good) inset; }}
   .card.highlight-early {{ border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn) inset; }}
-  .card-header {{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }}
+  .card-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }}
+  .ticker-group {{ display: flex; align-items: center; gap: 8px; }}
+  .logo {{ width: 22px; height: 22px; border-radius: 5px; object-fit: contain; background: #fff1; }}
   .ticker {{ font-weight: 700; font-size: 1.05rem; }}
   .mentions-count {{ color: var(--muted); font-size: 0.8rem; }}
   .sparkline svg {{ display: block; width: 100%; height: auto; }}
+  .meta-line {{ color: var(--muted); font-size: 0.75rem; margin-top: 4px; }}
   .reasons {{ margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 0.78rem; }}
   .empty {{ color: var(--muted); font-size: 0.9rem; }}
   .config-box {{
@@ -240,12 +270,17 @@ def render_dashboard(cfg, last_collection, days_collected_global, tracked_count,
       <div>universe : <b>{html.escape(cfg.universe)}</b></div>
       <div>anomaly_sensitivity : <b>{cfg.anomaly_sensitivity}</b></div>
       <div>price_volatility_sensitivity : <b>{cfg.price_volatility_sensitivity}</b></div>
+      <div>engagement_sensitivity : <b>{cfg.engagement_sensitivity}</b></div>
       <div>run_time (UTC) : <b>{html.escape(cfg.run_time)}</b></div>
     </div>
   </section>
 
   <section>
-    <h2>Signaux validés (hausse progressive + prix/volume stables)</h2>
+    <h2>Signaux validés</h2>
+    <p class="subtitle" style="margin-top:-6px;">
+      Mentions en hausse progressive · classement ApeWisdom qui grimpe progressivement ·
+      engagement (upvotes/mention) sain · prix et volume stables.
+    </p>
     <div class="grid">{qualifying_html}</div>
   </section>
 

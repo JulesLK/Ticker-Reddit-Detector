@@ -71,10 +71,13 @@
   }
   .card.highlight-qualify { border-color: var(--good); box-shadow: 0 0 0 1px var(--good) inset; }
   .card.highlight-early { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn) inset; }
-  .card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .ticker-group { display: flex; align-items: center; gap: 8px; }
+  .logo { width: 22px; height: 22px; border-radius: 5px; object-fit: contain; background: #fff1; }
   .ticker { font-weight: 700; font-size: 1.05rem; }
   .mentions-count { color: var(--muted); font-size: 0.8rem; }
   .sparkline svg { display: block; width: 100%; height: auto; }
+  .meta-line { color: var(--muted); font-size: 0.75rem; margin-top: 4px; }
   .reasons { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 0.78rem; }
   .empty { color: var(--muted); font-size: 0.9rem; }
   .config-box {
@@ -94,7 +97,7 @@
 </head>
 <body>
   <h1>Screener Reddit — Intelligence Collective Progressive</h1>
-  <div class="subtitle">Dashboard régénéré automatiquement à chaque collecte · dernière génération : 2026-09-13 14:30 UTC</div>
+  <div class="subtitle">Dashboard régénéré automatiquement à chaque collecte · dernière génération : 2026-09-13 14:51 UTC</div>
 
   <div class="top-grid">
     <div class="stat-box">
@@ -105,11 +108,11 @@
     <div class="stat-box">
       <div class="stat-label">Dernière collecte</div>
       <div class="stat-value status-ok">success</div>
-      <div class="subtitle" style="margin:4px 0 0;">2026-09-13T14:29:36.168799+00:00 — 550 tickers collectés</div>
+      <div class="subtitle" style="margin:4px 0 0;">2026-09-13T14:51:35.662782+00:00 — 551 tickers collectés</div>
     </div>
     <div class="stat-box">
       <div class="stat-label">Tickers suivis actuellement</div>
-      <div class="stat-value">553</div>
+      <div class="stat-value">559</div>
     </div>
     <div class="stat-box">
       <div class="stat-label">Signaux validés aujourd'hui</div>
@@ -125,13 +128,18 @@
       <div>universe : <b>all-stocks</b></div>
       <div>anomaly_sensitivity : <b>2.5</b></div>
       <div>price_volatility_sensitivity : <b>2.5</b></div>
+      <div>engagement_sensitivity : <b>2.5</b></div>
       <div>run_time (UTC) : <b>21:30</b></div>
     </div>
   </section>
 
   <section>
-    <h2>Signaux validés (hausse progressive + prix/volume stables)</h2>
-    <div class="grid"><p class="empty">Aucun ticker ne valide les 3 conditions aujourd'hui.</p></div>
+    <h2>Signaux validés</h2>
+    <p class="subtitle" style="margin-top:-6px;">
+      Mentions en hausse progressive · classement ApeWisdom qui grimpe progressivement ·
+      engagement (upvotes/mention) sain · prix et volume stables.
+    </p>
+    <div class="grid"><p class="empty">Aucun ticker ne valide toutes les conditions aujourd'hui.</p></div>
   </section>
 
   <section>
@@ -144,109 +152,169 @@
     <div class="grid">
     <div class="card ">
         <div class="card-header">
-            <span class="ticker">MU</span>
-            <span class="mentions-count">32 mentions</span>
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/MU.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">MU</span>
+            </span>
+            <span class="mentions-count">33 mentions</span>
         </div>
         <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
         <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
     </div>
     
     <div class="card ">
         <div class="card-header">
-            <span class="ticker">SPY</span>
-            <span class="mentions-count">27 mentions</span>
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/SPY.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">SPY</span>
+            </span>
+            <span class="mentions-count">28 mentions</span>
         </div>
         <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
         <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
     </div>
     
     <div class="card ">
         <div class="card-header">
-            <span class="ticker">NVDA</span>
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/NVDA.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">NVDA</span>
+            </span>
+            <span class="mentions-count">18 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/QQQ.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">QQQ</span>
+            </span>
+            <span class="mentions-count">18 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/ORCL.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">ORCL</span>
+            </span>
             <span class="mentions-count">17 mentions</span>
         </div>
         <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
         <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
     </div>
     
     <div class="card ">
         <div class="card-header">
-            <span class="ticker">ORCL</span>
-            <span class="mentions-count">17 mentions</span>
-        </div>
-        <div class="sparkline"><svg width="260" height="70"></svg></div>
-        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
-    </div>
-    
-    <div class="card ">
-        <div class="card-header">
-            <span class="ticker">QQQ</span>
-            <span class="mentions-count">16 mentions</span>
-        </div>
-        <div class="sparkline"><svg width="260" height="70"></svg></div>
-        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
-    </div>
-    
-    <div class="card ">
-        <div class="card-header">
-            <span class="ticker">NBIS</span>
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/NBIS.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">NBIS</span>
+            </span>
             <span class="mentions-count">13 mentions</span>
         </div>
         <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
         <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
     </div>
     
     <div class="card ">
         <div class="card-header">
-            <span class="ticker">GME</span>
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/SNDK.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">SNDK</span>
+            </span>
+            <span class="mentions-count">13 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/AGI.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">AGI</span>
+            </span>
             <span class="mentions-count">12 mentions</span>
         </div>
         <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
         <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
     </div>
     
     <div class="card ">
         <div class="card-header">
-            <span class="ticker">AGI</span>
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/GME.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">GME</span>
+            </span>
+            <span class="mentions-count">12 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/YOU.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">YOU</span>
+            </span>
             <span class="mentions-count">11 mentions</span>
         </div>
         <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
         <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
     </div>
     
     <div class="card ">
         <div class="card-header">
-            <span class="ticker">SNDK</span>
-            <span class="mentions-count">11 mentions</span>
-        </div>
-        <div class="sparkline"><svg width="260" height="70"></svg></div>
-        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
-    </div>
-    
-    <div class="card ">
-        <div class="card-header">
-            <span class="ticker">YOU</span>
-            <span class="mentions-count">11 mentions</span>
-        </div>
-        <div class="sparkline"><svg width="260" height="70"></svg></div>
-        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
-    </div>
-    
-    <div class="card ">
-        <div class="card-header">
-            <span class="ticker">AM</span>
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/AM.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">AM</span>
+            </span>
             <span class="mentions-count">9 mentions</span>
         </div>
         <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
         <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
     </div>
     
     <div class="card ">
         <div class="card-header">
-            <span class="ticker">EU</span>
+            <span class="ticker-group">
+                <img class="logo" src="https://financialmodelingprep.com/image-stock/EU.png" alt="" loading="lazy" onerror="this.style.display='none'" />
+                <span class="ticker">EU</span>
+            </span>
             <span class="mentions-count">9 mentions</span>
         </div>
         <div class="sparkline"><svg width="260" height="70"></svg></div>
+        
+        
         <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
     </div>
     </div>
