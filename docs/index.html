@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Screener Reddit — Intelligence Collective Progressive</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #141822;
+    --border: #262c3a;
+    --text: #e6e9f0;
+    --muted: #8993a8;
+    --accent: #5b8cff;
+    --good: #3ecf8e;
+    --warn: #e8b94b;
+    --bad: #e8576b;
+    --mentions-color: #5b8cff;
+    --price-color: #e8b94b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    margin: 0;
+    padding: 24px 32px 64px;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+  .top-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-value { font-size: 1.6rem; font-weight: 600; margin-top: 4px; }
+  .progress-bar-track {
+    background: var(--border);
+    border-radius: 6px;
+    height: 10px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    background: var(--accent);
+    height: 100%;
+  }
+  .status-ok { color: var(--good); }
+  .status-error { color: var(--bad); }
+  section { margin-bottom: 36px; }
+  section h2 { font-size: 1.05rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .card.highlight-qualify { border-color: var(--good); box-shadow: 0 0 0 1px var(--good) inset; }
+  .card.highlight-early { border-color: var(--warn); box-shadow: 0 0 0 1px var(--warn) inset; }
+  .card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .ticker { font-weight: 700; font-size: 1.05rem; }
+  .mentions-count { color: var(--muted); font-size: 0.8rem; }
+  .sparkline svg { display: block; width: 100%; height: auto; }
+  .reasons { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 0.78rem; }
+  .empty { color: var(--muted); font-size: 0.9rem; }
+  .config-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 6px 20px;
+  }
+  .config-box b { color: var(--text); }
+  footer { color: var(--muted); font-size: 0.75rem; margin-top: 40px; }
+</style>
+</head>
+<body>
+  <h1>Screener Reddit — Intelligence Collective Progressive</h1>
+  <div class="subtitle">Dashboard régénéré automatiquement à chaque collecte · dernière génération : 2026-09-13 14:11 UTC</div>
+
+  <div class="top-grid">
+    <div class="stat-box">
+      <div class="stat-label">Progression de la fenêtre</div>
+      <div class="stat-value">Jour 1 / 14</div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" style="width:7%"></div></div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Dernière collecte</div>
+      <div class="stat-value status-ok">success</div>
+      <div class="subtitle" style="margin:4px 0 0;">2026-09-13T14:10:41.475352+00:00 — 552 tickers collectés</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Tickers suivis actuellement</div>
+      <div class="stat-value">552</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Signaux validés aujourd'hui</div>
+      <div class="stat-value">0</div>
+    </div>
+  </div>
+
+  <section>
+    <h2>Paramètres utilisés pour ces résultats</h2>
+    <div class="config-box">
+      <div>window_days : <b>14</b></div>
+      <div>baseline_days : <b>25</b></div>
+      <div>universe : <b>all-stocks</b></div>
+      <div>anomaly_sensitivity : <b>2.5</b></div>
+      <div>price_volatility_sensitivity : <b>2.5</b></div>
+      <div>run_time (UTC) : <b>21:30</b></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Signaux validés (hausse progressive + prix/volume stables)</h2>
+    <div class="grid"><p class="empty">Aucun ticker ne valide les 3 conditions aujourd'hui.</p></div>
+  </section>
+
+  <section>
+    <h2>Tendances naissantes (avant fin de fenêtre)</h2>
+    <div class="grid"><p class="empty">Aucune tendance naissante détectée pour l'instant.</p></div>
+  </section>
+
+  <section>
+    <h2>Tickers les plus actifs (toutes conditions confondues)</h2>
+    <div class="grid">
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">MU</span>
+            <span class="mentions-count">32 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">SPY</span>
+            <span class="mentions-count">25 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">NVDA</span>
+            <span class="mentions-count">18 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">ORCL</span>
+            <span class="mentions-count">17 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">QQQ</span>
+            <span class="mentions-count">16 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">NBIS</span>
+            <span class="mentions-count">13 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">GME</span>
+            <span class="mentions-count">12 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">AGI</span>
+            <span class="mentions-count">11 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">SNDK</span>
+            <span class="mentions-count">11 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">YOU</span>
+            <span class="mentions-count">11 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">AM</span>
+            <span class="mentions-count">9 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    
+    <div class="card ">
+        <div class="card-header">
+            <span class="ticker">AMD</span>
+            <span class="mentions-count">8 mentions</span>
+        </div>
+        <div class="sparkline"><svg width="260" height="70"></svg></div>
+        <ul class="reasons"><li>Historique trop court (1 jour(s))</li></ul>
+    </div>
+    </div>
+  </section>
+
+  <footer>Sources : ApeWisdom (mentions Reddit) · Yahoo Finance via yfinance (prix/volume). Étage 1 uniquement — pas d'analyse fondamentale.</footer>
+</body>
+</html>

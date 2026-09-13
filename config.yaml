@@ -1,0 +1,44 @@
+# Configuration du screener Reddit "Intelligence Collective Progressive"
+#
+# IMPORTANT : modifier ces valeurs ne supprime jamais l'historique brut déjà
+# collecté (table mentions_snapshot / price_snapshot en base). Seul le calcul
+# du signal du jour est affecté par un changement ici. Si vous augmentez
+# window_days ou baseline_days après avoir déjà commencé la collecte, l'outil
+# indiquera qu'il manque des jours d'historique plutôt que de produire un
+# résultat basé sur une fenêtre incomplète.
+
+# Taille de la fenêtre glissante d'analyse (en jours de collecte, week-ends inclus)
+window_days: 14
+
+# Période sur laquelle calculer la moyenne / écart-type propre à chaque ticker
+# (baseline "normalité" du ticker, doit être >= window_days)
+baseline_days: 25
+
+# Filtre ApeWisdom scanné chaque jour. Valeurs possibles côté API :
+# "all-stocks", "all", "wallstreetbets", "stocks", "options", "cryptocurrency", ...
+# "all-stocks" = tout le classement actions disponible sur ApeWisdom.
+universe: "all-stocks"
+
+# Nombre max de pages ApeWisdom à parcourir par run (garde-fou anti-emballement,
+# l'API paginė ~100 tickers/page). Mettre une valeur haute pour "tout" le classement.
+max_pages: 20
+
+# Sensibilité du test d'anomalie sur la hausse des mentions.
+# Le delta mentions jour/jour est transformé en z-score par rapport à la
+# baseline propre du ticker (moyenne/écart-type des deltas sur baseline_days).
+# Un ticker est rejeté si au moins un jour de la fenêtre dépasse ce seuil
+# (= un seul jour explique une part disproportionnée de la hausse totale).
+anomaly_sensitivity: 2.5
+
+# Sensibilité du test de stabilité prix/volume, même principe en z-score
+# mais appliqué au rendement journalier et au volume du ticker.
+price_volatility_sensitivity: 2.5
+
+# Heure d'exécution quotidienne visée (UTC, format HH:MM). Le workflow GitHub
+# Actions tourne toutes les heures et ne déclenche la collecte réelle que
+# lorsque l'heure UTC courante correspond à run_time (± tolérance de 30 min).
+run_time: "21:30"
+
+# Nombre minimum de jours de données déjà accumulés avant de considérer une
+# "tendance naissante" pour la mise en évidence du dashboard (avant fin de fenêtre).
+early_trend_min_days: 5

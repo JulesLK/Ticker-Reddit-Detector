@@ -1,0 +1,62 @@
+name: Collecte quotidienne & dashboard
+
+on:
+  schedule:
+    # Tourne toutes les heures ; main.py ne fait le vrai travail que lorsque
+    # l'heure UTC correspond à run_time dans config.yaml (évite d'avoir à
+    # modifier ce cron à chaque changement de config).
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run collector
+        env:
+          FORCE_RUN: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+        run: python src/main.py
+
+      - name: Commit data & dashboard updates
+        run: |
+          git config user.name "reddit-screener-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/reddit_mentions.db docs/index.html
+          git diff --cached --quiet || git commit -m "Collecte quotidienne $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
+
+      - name: Upload dashboard artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy-pages:
+    needs: collect
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
