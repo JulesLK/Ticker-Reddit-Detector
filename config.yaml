@@ -41,10 +41,11 @@ price_volatility_sensitivity: 2.5
 # d'une vraie conviction communautaire).
 engagement_sensitivity: 2.5
 
-# Heure d'exécution quotidienne visée (UTC, format HH:MM). Le workflow GitHub
-# Actions tourne toutes les heures et ne déclenche la collecte réelle que
-# lorsque l'heure UTC courante correspond à run_time (± tolérance de 30 min).
-run_time: "21:30"
+# Heure UTC (HH:MM) à partir de laquelle la collecte quotidienne est autorisée.
+# Le workflow tourne toutes les heures, mais GitHub saute souvent des crons :
+# la collecte a donc lieu au premier passage de la journée après cette heure,
+# une seule fois par jour UTC.
+run_time: "00:00"
 
 # Nombre minimum de jours de données déjà accumulés avant de considérer une
 # "tendance naissante" pour la mise en évidence du dashboard (avant fin de fenêtre).

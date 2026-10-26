@@ -243,8 +243,8 @@ def render_dashboard(cfg, last_collection, days_collected_global, tracked_count,
 
   <div class="top-grid">
     <div class="stat-box">
-      <div class="stat-label">Progression de la fenêtre</div>
-      <div class="stat-value">Jour {min(days_collected_global, cfg.window_days)} / {cfg.window_days}</div>
+      <div class="stat-label">Jours collectés (fenêtre glissante)</div>
+      <div class="stat-value">{min(days_collected_global, cfg.window_days)} / {cfg.window_days} jours</div>
       <div class="progress-bar-track"><div class="progress-bar-fill" style="width:{progress_pct}%"></div></div>
     </div>
     <div class="stat-box">

@@ -103,6 +103,14 @@ def get_last_collection(conn):
     return dict(row) if row else None
 
 
+def has_successful_collection(conn, run_date):
+    row = conn.execute(
+        "SELECT 1 FROM collection_log WHERE run_date = ? AND status = 'success' LIMIT 1",
+        (run_date,),
+    ).fetchone()
+    return row is not None
+
+
 def get_distinct_dates(conn):
     rows = conn.execute("SELECT DISTINCT date FROM mentions_snapshot ORDER BY date").fetchall()
     return [r["date"] for r in rows]
