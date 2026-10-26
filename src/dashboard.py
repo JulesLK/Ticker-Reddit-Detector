@@ -105,7 +105,53 @@ def _card(ticker, evaluation, highlight_class=""):
     """
 
 
-def render_dashboard(cfg, last_collection, days_collected_global, tracked_count, evaluations):
+def _pct(v):
+    return "-" if v is None else f"{v * 100:+.1f}%"
+
+
+def _tracking_html(cfg, performance):
+    if not performance:
+        return '<p class="empty">Suivi indisponible.</p>'
+    def _win(v):
+        return "-" if v is None else "%.0f%%" % (v * 100)
+
+    summary_rows = "".join(
+        f"<tr><td>+{h} jours</td><td>{s['n']}</td><td>{_pct(s['mean_excess'])}</td>"
+        f"<td>{_win(s['win_rate'])}</td></tr>"
+        for h, s in performance["summary"].items()
+    )
+    detail_rows = "".join(
+        f"<tr><td>{html.escape(r['signal_date'])}</td><td><b>{html.escape(r['ticker'])}</b></td>"
+        + "".join(
+            f"<td>{_pct(r['horizons'][h]['excess']) if r['horizons'].get(h) else '…'}</td>"
+            for h in cfg.signal_horizons
+        )
+        + "</tr>"
+        for r in reversed(performance["rows"][-30:])
+    )
+    horizon_heads = "".join(f"<th>+{h} j</th>" for h in cfg.signal_horizons)
+    detail = (
+        f"<table><tr><th>Date</th><th>Ticker</th>{horizon_heads}</tr>{detail_rows}</table>"
+        if detail_rows
+        else '<p class="empty">Aucun signal enregistré pour l\'instant.</p>'
+    )
+    return f"""
+    <p class="subtitle" style="margin-top:-6px;">
+      Rendement de chaque signal moins celui de {html.escape(cfg.benchmark)} sur la même période.
+      Critère fixé à l'avance : au moins {cfg.success_min_signals} signaux mesurés et au moins
+      {cfg.success_win_rate * 100:.0f}% qui battent {html.escape(cfg.benchmark)}.
+    </p>
+    <p><b>{html.escape(performance['verdict'])}</b></p>
+    <table>
+      <tr><th>Horizon</th><th>Signaux mesurés</th><th>Surperformance moyenne</th><th>Taux de réussite</th></tr>
+      {summary_rows}
+    </table>
+    <h3 style="font-size:0.9rem;margin-top:18px;">Derniers signaux (surperformance vs {html.escape(cfg.benchmark)})</h3>
+    {detail}
+    """
+
+
+def render_dashboard(cfg, last_collection, days_collected_global, tracked_count, evaluations, performance=None):
     """evaluations: dict[ticker] -> TickerEvaluation"""
 
     qualifying = {t: e for t, e in evaluations.items() if e.status == "qualifies"}
@@ -222,6 +268,9 @@ def render_dashboard(cfg, last_collection, days_collected_global, tracked_count,
   .meta-line {{ color: var(--muted); font-size: 0.75rem; margin-top: 4px; }}
   .reasons {{ margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 0.78rem; }}
   .empty {{ color: var(--muted); font-size: 0.9rem; }}
+  table {{ border-collapse: collapse; font-size: 0.85rem; margin-top: 8px; }}
+  th, td {{ text-align: left; padding: 5px 14px 5px 0; border-bottom: 1px solid var(--border); }}
+  th {{ color: var(--muted); font-weight: 500; font-size: 0.75rem; text-transform: uppercase; }}
   .config-box {{
     background: var(--panel);
     border: 1px solid var(--border);
@@ -272,6 +321,10 @@ def render_dashboard(cfg, last_collection, days_collected_global, tracked_count,
       <div>price_volatility_sensitivity : <b>{cfg.price_volatility_sensitivity}</b></div>
       <div>engagement_sensitivity : <b>{cfg.engagement_sensitivity}</b></div>
       <div>run_time (UTC) : <b>{html.escape(cfg.run_time)}</b></div>
+      <div>smoothing_days : <b>{cfg.smoothing_days}</b></div>
+      <div>min_median_mentions : <b>{cfg.min_median_mentions:g}</b></div>
+      <div>min_rise_ratio : <b>{cfg.min_rise_ratio:g}</b></div>
+      <div>tickers exclus : <b>{len(cfg.excluded_tickers)}</b></div>
     </div>
   </section>
 
@@ -279,9 +332,15 @@ def render_dashboard(cfg, last_collection, days_collected_global, tracked_count,
     <h2>Signaux validés</h2>
     <p class="subtitle" style="margin-top:-6px;">
       Mentions en hausse progressive · classement ApeWisdom qui grimpe progressivement ·
-      engagement (upvotes/mention) sain · prix et volume stables.
+      engagement (upvotes/mention) sain · prix et volume stables · volume de mentions
+      minimal et hausse d'au moins x{cfg.min_rise_ratio:g} (mentions lissées sur {cfg.smoothing_days} jours).
     </p>
     <div class="grid">{qualifying_html}</div>
+  </section>
+
+  <section>
+    <h2>Suivi des signaux (le vrai test)</h2>
+    {_tracking_html(cfg, performance)}
   </section>
 
   <section>

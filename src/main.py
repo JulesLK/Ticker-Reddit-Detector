@@ -13,6 +13,7 @@ from apewisdom import fetch_universe, today_utc_date
 import prices as prices_mod
 import storage
 import signals
+import tracking
 import dashboard
 
 
@@ -63,23 +64,30 @@ def main():
             storage.log_collection(conn, today, "error", str(exc))
             print(f"Collecte ApeWisdom en erreur : {exc}", file=sys.stderr)
 
-        all_tickers = storage.get_all_tickers(conn)
-        earliest_needed = (datetime.now(timezone.utc) - timedelta(days=cfg.baseline_days + 5)).strftime(
+        excluded = set(cfg.excluded_tickers)
+        all_tickers = [t for t in storage.get_all_tickers(conn) if t not in excluded]
+        all_dates = storage.get_distinct_dates(conn)
+        earliest_needed = (datetime.now(timezone.utc) - timedelta(days=cfg.baseline_days + cfg.window_days + 5)).strftime(
             "%Y-%m-%d"
         )
 
         if all_tickers:
-            print(f"Récupération prix/volume pour {len(all_tickers)} tickers…")
-            raw_prices = prices_mod.fetch_price_history(all_tickers, earliest_needed, today)
+            price_tickers = all_tickers + ([cfg.benchmark] if cfg.benchmark not in all_tickers else [])
+            print(f"Récupération prix/volume pour {len(price_tickers)} tickers…")
+            raw_prices = prices_mod.fetch_price_history(price_tickers, earliest_needed, today)
 
-            for ticker in all_tickers:
-                mention_dates = [
-                    m["date"] for m in storage.get_ticker_mentions_history(conn, ticker)
-                ]
-                if not mention_dates:
-                    continue
+            for ticker in price_tickers:
+                if ticker == cfg.benchmark and ticker not in all_tickers:
+                    first_date = all_dates[0] if all_dates else today
+                else:
+                    mention_dates = [
+                        m["date"] for m in storage.get_ticker_mentions_history(conn, ticker)
+                    ]
+                    if not mention_dates:
+                        continue
+                    first_date = mention_dates[0]
                 series = prices_mod.build_daily_series_with_carry(
-                    raw_prices.get(ticker, {}), mention_dates[0], today
+                    raw_prices.get(ticker, {}), first_date, today
                 )
                 if series:
                     storage.upsert_prices(
@@ -94,6 +102,20 @@ def main():
             evaluation.ticker = ticker
             evaluations[ticker] = evaluation
 
+        new_signals = [
+            {
+                "ticker": t,
+                "close": e.price_series[-1]["close"] if e.price_series else None,
+                "mentions": e.mentions_series[-1]["mentions"],
+                "rank": e.mentions_series[-1]["rank"],
+            }
+            for t, e in evaluations.items()
+            if e.status == "qualifies"
+        ]
+        if new_signals:
+            storage.log_signals(conn, today, new_signals)
+        performance = tracking.compute_performance(conn, cfg)
+
         window_start = (
             datetime.now(timezone.utc) - timedelta(days=cfg.window_days - 1)
         ).strftime("%Y-%m-%d")
@@ -105,7 +127,7 @@ def main():
         last_collection = storage.get_last_collection(conn)
 
         html_out = dashboard.render_dashboard(
-            cfg, last_collection, days_collected_global, tracked_count, evaluations
+            cfg, last_collection, days_collected_global, tracked_count, evaluations, performance
         )
         DASHBOARD_PATH.parent.mkdir(parents=True, exist_ok=True)
         DASHBOARD_PATH.write_text(html_out, encoding="utf-8")

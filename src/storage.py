@@ -28,6 +28,15 @@ CREATE TABLE IF NOT EXISTS price_snapshot (
     PRIMARY KEY (date, ticker)
 );
 
+CREATE TABLE IF NOT EXISTS signal_log (
+    signal_date TEXT NOT NULL,
+    ticker TEXT NOT NULL,
+    close REAL,
+    mentions INTEGER,
+    rank INTEGER,
+    PRIMARY KEY (signal_date, ticker)
+);
+
 CREATE TABLE IF NOT EXISTS collection_log (
     run_date TEXT NOT NULL,
     timestamp TEXT NOT NULL,
@@ -145,3 +154,29 @@ def get_latest_snapshot_tickers(conn, date):
         (date,),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def log_signals(conn, signal_date, rows):
+    """rows: dicts avec ticker, close, mentions, rank. Un signal déjà enregistré
+    pour (date, ticker) n'est jamais réécrit."""
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO signal_log (signal_date, ticker, close, mentions, rank)
+        VALUES (:signal_date, :ticker, :close, :mentions, :rank)
+        """,
+        [{**r, "signal_date": signal_date} for r in rows],
+    )
+
+
+def get_signals(conn):
+    rows = conn.execute(
+        "SELECT signal_date, ticker, close, mentions, rank FROM signal_log ORDER BY signal_date, ticker"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_close(conn, ticker, date):
+    row = conn.execute(
+        "SELECT close FROM price_snapshot WHERE ticker = ? AND date = ?", (ticker, date)
+    ).fetchone()
+    return row["close"] if row and row["close"] is not None else None

@@ -18,7 +18,13 @@ périmètre de cet outil.
 2. **Prix/volume** : récupérés via `yfinance` (Yahoo Finance). Les week-ends
    (marché fermé) sont rattachés au prix/volume de clôture du vendredi
    précédent.
-3. **Détection** (par ticker, dès qu'il a assez d'historique) — 5 conditions :
+3. **Détection** (par ticker, dès qu'il a assez d'historique : `baseline_days`
+   + `window_days` + 1 jours de collecte). Mentions et rang sont d'abord
+   **lissés sur 7 jours** (les mentions Reddit chutent chaque week-end). Les ETF,
+   méga-caps et tickers qui sont aussi des mots courants (`excluded_tickers`)
+   sont ignorés. Conditions :
+   - **volume minimal** (`min_median_mentions`) et **hausse minimale**
+     (`min_rise_ratio`, ×1,5 par défaut) : en dessous, le bruit domine ;
    - hausse de mentions **progressive** : aucun jour ne doit représenter une
      part disproportionnée de la hausse (z-score du delta journalier par
      rapport à la baseline propre du ticker) ;
@@ -33,7 +39,12 @@ périmètre de cet outil.
    - un ticker qui casse une condition ou sort du classement ApeWisdom est
      simplement retiré de la liste du jour — pas de blacklist permanente, il
      peut revalider les critères plus tard.
-4. **Dashboard** (`docs/index.html`, publié sur GitHub Pages) régénéré à
+4. **Suivi des signaux** : chaque ticker validé est enregistré (`signal_log`)
+   avec son prix du jour. Son rendement à +5/+10/+20 jours est comparé à SPY
+   et affiché sur le dashboard. C'est le vrai test : le screener est jugé utile
+   si au moins 55 % de ≥30 signaux mesurés battent SPY (critère modifiable,
+   fixé à l'avance pour ne pas l'ajuster après coup).
+5. **Dashboard** (`docs/index.html`, publié sur GitHub Pages) régénéré à
    chaque run : progression "Jour X / window_days", statut de la dernière
    collecte, nombre de tickers suivis, mini-courbes mentions + prix pour les
    tickers les plus actifs, mise en évidence des tendances naissantes, et
@@ -55,7 +66,12 @@ incomplète.
 | Paramètre | Rôle |
 |---|---|
 | `window_days` | Taille de la fenêtre glissante d'analyse |
-| `baseline_days` | Période de calcul de la normalité propre au ticker (doit être ≥ `window_days`) |
+| `baseline_days` | Période de normalité du ticker, prise juste *avant* la fenêtre (ne la recouvre pas ; doit être ≥ `window_days`) |
+| `smoothing_days` | Lissage des mentions/rang (absorbe l'effet week-end) |
+| `min_median_mentions`, `min_rise_ratio` | Volume minimal et hausse minimale pour valider un signal |
+| `excluded_tickers` | ETF, méga-caps et faux tickers (mots courants) ignorés |
+| `benchmark`, `signal_horizons` | Indice de comparaison et horizons (jours) du suivi des signaux |
+| `success_win_rate`, `success_min_signals` | Critère de réussite fixé à l'avance |
 | `universe` | Filtre ApeWisdom scanné chaque jour |
 | `max_pages` | Garde-fou sur la pagination ApeWisdom |
 | `anomaly_sensitivity` | Seuil (en z-score) de hausse disproportionnée sur un seul jour, pour les mentions et pour le rang ApeWisdom |

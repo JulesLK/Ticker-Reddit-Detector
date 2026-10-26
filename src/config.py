@@ -22,6 +22,14 @@ class Config:
     engagement_sensitivity: float
     run_time: str
     early_trend_min_days: int
+    smoothing_days: int = 7
+    min_median_mentions: float = 5
+    min_rise_ratio: float = 1.5
+    excluded_tickers: tuple = ()
+    benchmark: str = "SPY"
+    signal_horizons: tuple = (5, 10, 20)
+    success_win_rate: float = 0.55
+    success_min_signals: int = 30
 
     @property
     def run_time_hour_utc(self) -> int:
@@ -42,6 +50,14 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         engagement_sensitivity=float(raw["engagement_sensitivity"]),
         run_time=str(raw["run_time"]),
         early_trend_min_days=int(raw["early_trend_min_days"]),
+        smoothing_days=int(raw.get("smoothing_days", 7)),
+        min_median_mentions=float(raw.get("min_median_mentions", 5)),
+        min_rise_ratio=float(raw.get("min_rise_ratio", 1.5)),
+        excluded_tickers=tuple(str(t).strip().upper() for t in raw.get("excluded_tickers") or ()),
+        benchmark=str(raw.get("benchmark", "SPY")).upper(),
+        signal_horizons=tuple(int(h) for h in raw.get("signal_horizons", (5, 10, 20))),
+        success_win_rate=float(raw.get("success_win_rate", 0.55)),
+        success_min_signals=int(raw.get("success_min_signals", 30)),
     )
 
     if cfg.baseline_days < cfg.window_days:
