@@ -9,15 +9,16 @@ Méthode (volontairement stricte, pour ne pas se raconter d'histoires) :
 - pour chaque date on mesure la corrélation de rang (Spearman) entre feature
   et rendement futur sur tous les tickers (l'"IC") ; on regarde sa moyenne et
   sa stabilité d'une date à l'autre ;
-- un test de permutation dit si l'IC moyen peut venir du hasard ;
+- un test par blocs de dates dit si l'IC moyen peut venir du hasard (les fenêtres
+  de rendement se chevauchent, donc les dates ne sont pas indépendantes) ;
 - comme on teste plusieurs features, seuil corrigé (Bonferroni).
 
-Usage : python src/patterns.py [horizon_jours] [mentions_min]"""
+Usage : python src/patterns.py [horizon_jours] [mentions_min] [--db chemin.db] [--since AAAA-MM-JJ] [--until AAAA-MM-JJ]"""
 
 import math
-import random
 import statistics
 import sys
+from pathlib import Path
 from datetime import datetime, timedelta
 
 import storage
@@ -66,26 +67,39 @@ def _plus_days(date, n):
 
 def build_rows(conn, benchmark, horizon, min_median):
     rows = []
+    calendar = storage.get_distinct_dates(conn)  # jours réellement collectés
     tickers = [r["ticker"] for r in conn.execute("SELECT DISTINCT ticker FROM mentions_snapshot")]
     last_price_date = conn.execute("SELECT MAX(date) d FROM price_snapshot").fetchone()["d"]
+    bench_close = {
+        r["date"]: r["close"]
+        for r in conn.execute("SELECT date, close FROM price_snapshot WHERE ticker = ?", (benchmark,))
+    }
     for t in tickers:
-        hist = storage.get_ticker_mentions_history(conn, t)
-        if len(hist) < LOOKBACK + 1:
+        seen = {h["date"]: h for h in storage.get_ticker_mentions_history(conn, t)}
+        if len(seen) < LOOKBACK:
             continue
-        if statistics.median(h["mentions"] for h in hist) < min_median:
-            continue
+        # un ticker absent d'un jour collecté = 0 mention ce jour-là
+        hist = [
+            seen.get(d, {"date": d, "mentions": 0, "rank": 10**6, "upvotes": 0})
+            for d in calendar
+        ]
+        prices = {
+            r["date"]: r["close"]
+            for r in conn.execute("SELECT date, close FROM price_snapshot WHERE ticker = ?", (t,))
+        }
         for i in range(LOOKBACK, len(hist)):
             past = hist[i - LOOKBACK: i + 1]
+            m = [h["mentions"] for h in past]
+            if statistics.median(m) < min_median:  # fenêtre récente uniquement : pas de fuite du futur
+                continue
             date = past[-1]["date"]
             target = _plus_days(date, horizon)
             if target > last_price_date:
                 continue
-            p0, p1 = storage.get_close(conn, t, date), storage.get_close(conn, t, target)
-            b0, b1 = storage.get_close(conn, benchmark, date), storage.get_close(conn, benchmark, target)
-            pp = storage.get_close(conn, t, past[0]["date"])
+            p0, p1, pp = prices.get(date), prices.get(target), prices.get(past[0]["date"])
+            b0, b1 = bench_close.get(date), bench_close.get(target)
             if not (p0 and p1 and b0 and b1 and pp):
                 continue
-            m = [h["mentions"] for h in past]
             prior_mean = statistics.mean(m[:-1])
             deltas = [b - a for a, b in zip(m, m[1:])]
             half = len(deltas) // 2
@@ -98,7 +112,7 @@ def build_rows(conn, benchmark, horizon, min_median):
                     "accel": statistics.mean(deltas[half:]) - statistics.mean(deltas[:half]),
                     "cv": statistics.pstdev(m) / max(statistics.mean(m), 1.0),
                     "up_share": sum(d > 0 for d in deltas) / len(deltas),
-                    "rank_gain": past[0]["rank"] - past[-1]["rank"],
+                    "rank_gain": min(past[0]["rank"], 5000) - min(past[-1]["rank"], 5000),
                     "engagement": past[-1]["upvotes"] / max(past[-1]["mentions"], 1),
                     "past_ret": p0 / pp - 1,
                     "excess": (p1 / p0 - 1) - (b1 / b0 - 1),
@@ -107,53 +121,65 @@ def build_rows(conn, benchmark, horizon, min_median):
     return rows
 
 
-def analyse(rows, n_perm=2000, seed=7):
-    random.seed(seed)
+def analyse(rows, horizon=5):
+    """IC par date, puis test sur des BLOCS de dates consécutives : les fenêtres
+    se chevauchent (un rendement à +5 jours recouvre ceux des jours voisins), donc
+    on ne traite pas chaque date comme indépendante."""
     by_date = {}
     for r in rows:
         by_date.setdefault(r["date"], []).append(r)
-    dates = [d for d, v in by_date.items() if len(v) >= 8]
+    dates = sorted(d for d, v in by_date.items() if len(v) >= 8)
+    block = max(2 * horizon, 10)
     out = []
     for name, fn in FEATURES.items():
         ics = []
         for d in dates:
             ic = spearman([fn(r) for r in by_date[d]], [r["excess"] for r in by_date[d]])
-            if ic is not None:
-                ics.append(ic)
-        if len(ics) < 3:
+            ics.append(ic if ic is not None else 0.0)
+        if len(ics) < 3 * block:
             continue
+        blocks = [
+            statistics.mean(ics[i: i + block])
+            for i in range(0, len(ics) - block + 1, block)
+        ]
         mean_ic = statistics.mean(ics)
-        # permutation : on mélange les rendements au sein de chaque date
-        hits = 0
-        for _ in range(n_perm):
-            sim = []
-            for d in dates:
-                ys = [r["excess"] for r in by_date[d]]
-                random.shuffle(ys)
-                ic = spearman([fn(r) for r in by_date[d]], ys)
-                if ic is not None:
-                    sim.append(ic)
-            if abs(statistics.mean(sim)) >= abs(mean_ic):
-                hits += 1
+        sd = statistics.stdev(blocks)
+        t = mean_ic / (sd / math.sqrt(len(blocks))) if sd else 0.0
         out.append(
             {
                 "feature": name,
                 "mean_ic": mean_ic,
                 "pos_dates": sum(i > 0 for i in ics),
                 "n_dates": len(ics),
-                "p_value": (hits + 1) / (n_perm + 1),
+                "p_value": math.erfc(abs(t) / math.sqrt(2)),
             }
         )
     return out, len(dates)
 
 
 def main():
-    horizon = int(sys.argv[1]) if len(sys.argv) > 1 else 5
-    min_median = float(sys.argv[2]) if len(sys.argv) > 2 else 3
+    args = sys.argv[1:]
+    db_path = DB_PATH
+    if "--db" in args:
+        i = args.index("--db")
+        db_path = Path(args[i + 1])
+        del args[i: i + 2]
+    since = until = None
+    for flag in ("--since", "--until"):
+        if flag in args:
+            i = args.index(flag)
+            if flag == "--since":
+                since = args[i + 1]
+            else:
+                until = args[i + 1]
+            del args[i: i + 2]
+    horizon = int(args[0]) if len(args) > 0 else 5
+    min_median = float(args[1]) if len(args) > 1 else 3
     cfg = load_config()
-    with storage.get_db(DB_PATH) as conn:
+    with storage.get_db(db_path) as conn:
         rows = build_rows(conn, cfg.benchmark, horizon, min_median)
-        results, n_dates = analyse(rows)
+        rows = [r for r in rows if (not since or r["date"] >= since) and (not until or r["date"] <= until)]
+        results, n_dates = analyse(rows, horizon)
     print(f"Horizon : +{horizon} jours · tickers avec médiane >= {min_median:g} mentions")
     print(f"Observations : {len(rows)} (ticker x date) sur {n_dates} dates utilisables\n")
     if not results:
