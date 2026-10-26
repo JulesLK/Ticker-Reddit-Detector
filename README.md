@@ -61,15 +61,16 @@ incomplète.
 | `anomaly_sensitivity` | Seuil (en z-score) de hausse disproportionnée sur un seul jour, pour les mentions et pour le rang ApeWisdom |
 | `price_volatility_sensitivity` | Seuil (en z-score) de mouvement de prix/volume anormal |
 | `engagement_sensitivity` | Seuil (en z-score) de chute anormale du ratio upvotes/mentions |
-| `run_time` | Heure UTC visée pour la collecte quotidienne |
+| `run_time` | Heure UTC à partir de laquelle la collecte du jour est autorisée |
 | `early_trend_min_days` | Historique minimum pour signaler une "tendance naissante" avant fin de fenêtre |
 
 ## Exécution automatique
 
 - **GitHub Actions** (`.github/workflows/daily-collect.yml`) tourne toutes
-  les heures ; le script ne fait la vraie collecte que lorsque l'heure UTC
-  correspond à `run_time` (± l'heure pile), ce qui évite d'avoir à modifier
-  le cron à chaque changement de config. Un déclenchement manuel
+  les heures, mais GitHub saute souvent des exécutions (seulement 4 à 6 runs
+  par jour en pratique). Le script collecte donc au **premier passage de la
+  journée UTC** après `run_time`, une seule fois par jour, ce qui évite les
+  jours manquants. Un déclenchement manuel
   (`workflow_dispatch`) force toujours l'exécution, quelle que soit l'heure.
 - Le workflow commit `data/reddit_mentions.db` et `docs/index.html` après
   chaque run, puis déploie `docs/` sur **GitHub Pages**.

@@ -16,28 +16,31 @@ import signals
 import dashboard
 
 
-def _should_run_now(cfg) -> bool:
+def _should_run_now(cfg, conn, today) -> bool:
     if os.environ.get("FORCE_RUN") == "1":
         return True
     if os.environ.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
         return True
-    now_hour = datetime.now(timezone.utc).hour
-    return now_hour == cfg.run_time_hour_utc
+    # GitHub Actions saute une bonne partie des crons horaires : on collecte au
+    # premier passage de la journée après run_time, sans exiger une heure exacte.
+    if datetime.now(timezone.utc).hour < cfg.run_time_hour_utc:
+        return False
+    return not storage.has_successful_collection(conn, today)
 
 
 def main():
     cfg = load_config()
 
-    if not _should_run_now(cfg):
-        print(
-            f"Heure actuelle UTC != run_time configuré ({cfg.run_time}). "
-            "Rien à faire ce passage-ci (le workflow tourne toutes les heures)."
-        )
-        return
-
     today = today_utc_date()
 
     with storage.get_db(DB_PATH) as conn:
+        if not _should_run_now(cfg, conn, today):
+            print(
+                f"Collecte déjà faite pour {today} ou heure UTC < run_time ({cfg.run_time}). "
+                "Rien à faire ce passage-ci."
+            )
+            return
+
         try:
             mention_rows = fetch_universe(cfg.universe, cfg.max_pages)
             rows_for_db = [
@@ -91,7 +94,12 @@ def main():
             evaluation.ticker = ticker
             evaluations[ticker] = evaluation
 
-        days_collected_global = len(storage.get_distinct_dates(conn))
+        window_start = (
+            datetime.now(timezone.utc) - timedelta(days=cfg.window_days - 1)
+        ).strftime("%Y-%m-%d")
+        days_collected_global = len(
+            [d for d in storage.get_distinct_dates(conn) if d >= window_start]
+        )
         latest_snapshot = storage.get_latest_snapshot_tickers(conn, today)
         tracked_count = len(latest_snapshot) if latest_snapshot else len(all_tickers)
         last_collection = storage.get_last_collection(conn)
