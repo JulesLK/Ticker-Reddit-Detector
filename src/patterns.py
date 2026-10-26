@@ -12,12 +12,13 @@ Méthode (volontairement stricte, pour ne pas se raconter d'histoires) :
 - un test de permutation dit si l'IC moyen peut venir du hasard ;
 - comme on teste plusieurs features, seuil corrigé (Bonferroni).
 
-Usage : python src/patterns.py [horizon_jours] [mentions_min]"""
+Usage : python src/patterns.py [horizon_jours] [mentions_min] [--db chemin.db]"""
 
 import math
 import random
 import statistics
 import sys
+from pathlib import Path
 from datetime import datetime, timedelta
 
 import storage
@@ -148,10 +149,16 @@ def analyse(rows, n_perm=2000, seed=7):
 
 
 def main():
-    horizon = int(sys.argv[1]) if len(sys.argv) > 1 else 5
-    min_median = float(sys.argv[2]) if len(sys.argv) > 2 else 3
+    args = sys.argv[1:]
+    db_path = DB_PATH
+    if "--db" in args:
+        i = args.index("--db")
+        db_path = Path(args[i + 1])
+        del args[i: i + 2]
+    horizon = int(args[0]) if len(args) > 0 else 5
+    min_median = float(args[1]) if len(args) > 1 else 3
     cfg = load_config()
-    with storage.get_db(DB_PATH) as conn:
+    with storage.get_db(db_path) as conn:
         rows = build_rows(conn, cfg.benchmark, horizon, min_median)
         results, n_dates = analyse(rows)
     print(f"Horizon : +{horizon} jours · tickers avec médiane >= {min_median:g} mentions")
