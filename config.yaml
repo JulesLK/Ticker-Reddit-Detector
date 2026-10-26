@@ -10,9 +10,94 @@
 # Taille de la fenêtre glissante d'analyse (en jours de collecte, week-ends inclus)
 window_days: 14
 
-# Période sur laquelle calculer la moyenne / écart-type propre à chaque ticker
-# (baseline "normalité" du ticker, doit être >= window_days)
-baseline_days: 25
+# Période de "normalité" propre à chaque ticker, prise JUSTE AVANT la fenêtre
+# d'analyse (elle ne la recouvre plus, sinon la hausse à détecter gonfle
+# elle-même l'écart-type de référence). Doit être >= window_days.
+# L'historique total requis pour un signal complet = baseline_days + window_days + 1.
+baseline_days: 14
+
+# Lissage (moyenne glissante, en jours) appliqué aux mentions et au rang avant
+# toute détection. 7 = absorbe l'effet week-end (les mentions Reddit chutent
+# le samedi/dimanche sur tous les tickers).
+smoothing_days: 7
+
+# Un ticker doit avoir au moins ce nombre de mentions/jour (médiane sur la
+# fenêtre) : en dessous, les compteurs sont trop petits pour distinguer une
+# vraie tendance du bruit.
+min_median_mentions: 5
+
+# Hausse minimale (mentions lissées fin de fenêtre / début de fenêtre) pour
+# parler de "montée". 1.5 = +50 %.
+min_rise_ratio: 1.5
+
+# Tickers ignorés : ETF et méga-caps (attention permanente, pas des
+# "pépites") et tickers qui sont aussi des mots courants (faux positifs de
+# détection : IT, ALL, ARE...). Modifiable librement.
+excluded_tickers:
+  - SPY
+  - QQQ
+  - IWM
+  - DIA
+  - VOO
+  - VTI
+  - VT
+  - SPXL
+  - SPXS
+  - TQQQ
+  - SQQQ
+  - SOXL
+  - SOXS
+  - SOXX
+  - SMH
+  - VGT
+  - XLK
+  - XLF
+  - XLE
+  - GLD
+  - SLV
+  - TLT
+  - SGOV
+  - IBIT
+  - ARKK
+  - UVXY
+  - VXX
+  - AAPL
+  - MSFT
+  - NVDA
+  - AMZN
+  - GOOGL
+  - GOOG
+  - META
+  - TSLA
+  - AVGO
+  - NFLX
+  - ORCL
+  - IT
+  - A
+  - ALL
+  - ARE
+  - ON
+  - SO
+  - ONE
+  - CAN
+  - FOR
+  - HAS
+  - SEE
+  - WELL
+  - AM
+  - MAGA
+  - FCF
+
+# --- Suivi des signaux (le vrai test : est-ce que ça prédit quelque chose ?) ---
+# Chaque ticker validé est enregistré avec son prix du jour. On mesure ensuite
+# son rendement après `signal_horizons` jours (calendaires) comparé à `benchmark`.
+benchmark: "SPY"
+signal_horizons: [5, 10, 20]
+# Critère de réussite fixé À L'AVANCE : le screener est jugé utile si, sur au
+# moins `success_min_signals` signaux mesurés, au moins `success_win_rate` des
+# signaux battent le benchmark.
+success_win_rate: 0.55
+success_min_signals: 30
 
 # Filtre ApeWisdom scanné chaque jour. Valeurs possibles côté API :
 # "all-stocks", "all", "wallstreetbets", "stocks", "options", "cryptocurrency", ...

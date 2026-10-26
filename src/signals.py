@@ -44,13 +44,39 @@ class TickerEvaluation:
     engagement_baseline_avg: float = None
 
 
+def _smooth(values, n):
+    """Moyenne glissante arrière sur n points (moins au tout début)."""
+    out = []
+    for i in range(len(values)):
+        chunk = values[max(0, i - n + 1): i + 1]
+        out.append(sum(chunk) / len(chunk))
+    return out
+
+
+def _rise_check(raw_window, smooth_window, cfg):
+    """Volume minimal et amplitude minimale de la hausse (sur mentions lissées)."""
+    median_mentions = statistics.median(raw_window) if raw_window else 0
+    rise_ratio = smooth_window[-1] / max(smooth_window[0], 1.0) if smooth_window else 0.0
+    return {
+        "enough_mentions": median_mentions >= cfg.min_median_mentions,
+        "median_mentions": median_mentions,
+        "big_enough": rise_ratio >= cfg.min_rise_ratio,
+        "rise_ratio": rise_ratio,
+    }
+
+
 def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
-    """mentions_history: liste triée par date de {"date","mentions"}.
+    """mentions_history: liste triée par date de {"date","mentions","rank","upvotes"}.
     price_history: liste triée par date de {"date","close","volume","is_weekend_carry"}
-    couvrant les mêmes dates (ou un sous-ensemble)."""
+    couvrant les mêmes dates (ou un sous-ensemble).
+
+    Historique requis pour un signal complet : baseline_days (juste avant la
+    fenêtre) + window_days + 1 points. Mentions et rang sont lissés sur
+    smoothing_days avant toute détection (effet week-end)."""
 
     ticker = None  # rempli par l'appelant si besoin ; on garde la fonction pure
-    required_days = cfg.baseline_days
+    window_points = cfg.window_days + 1
+    required_days = cfg.baseline_days + window_points
 
     days_collected = len(mentions_history)
 
@@ -65,33 +91,52 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
             price_series=price_history,
         )
 
+    raw_mentions = [m["mentions"] for m in mentions_history]
+    smooth_mentions = _smooth(raw_mentions, cfg.smoothing_days)
+    smooth_rank_scores = _smooth([-m["rank"] for m in mentions_history], cfg.smoothing_days)
+
     if days_collected < required_days:
         # Pas assez pour un signal définitif, mais assez pour juger d'une
         # tendance naissante à mettre en avant sur le dashboard.
-        early = _is_progressive(
-            [m["mentions"] for m in mentions_history],
-            [m["mentions"] for m in mentions_history],  # baseline = tout l'historique dispo
-            cfg.anomaly_sensitivity,
-        )
+        early = _is_progressive(smooth_mentions, smooth_mentions, cfg.anomaly_sensitivity)
+        rise = _rise_check(raw_mentions[-window_points:], smooth_mentions[-window_points:], cfg)
         return TickerEvaluation(
             ticker=ticker,
             status="insufficient_history",
             days_collected=days_collected,
             days_needed=required_days,
             reasons=[f"Il manque {required_days - days_collected} jour(s) d'historique"],
-            is_early_trend=early["progressive"] and early["net_rise"] > 0,
+            is_early_trend=(
+                early["progressive"]
+                and early["net_rise"] > 0
+                and rise["enough_mentions"]
+                and rise["big_enough"]
+            ),
             mentions_series=mentions_history,
             price_series=price_history,
         )
 
-    baseline_mentions = [m["mentions"] for m in mentions_history[-required_days:]]
-    window_mentions = [m["mentions"] for m in mentions_history[-(cfg.window_days + 1):]]
+    w = window_points
+    baseline_slice = slice(-(w + cfg.baseline_days), -w)
+    window_slice = slice(-w, None)
 
+    window_mentions = smooth_mentions[window_slice]
+    baseline_mentions = smooth_mentions[baseline_slice]
     mention_check = _is_progressive(window_mentions, baseline_mentions, cfg.anomaly_sensitivity)
+    rise = _rise_check(raw_mentions[window_slice], window_mentions, cfg)
 
     reasons = []
+    if not rise["enough_mentions"]:
+        reasons.append(
+            f"Trop peu de mentions (médiane {rise['median_mentions']:.1f}/jour, "
+            f"minimum {cfg.min_median_mentions:g})"
+        )
     if mention_check["net_rise"] <= 0:
         reasons.append("Pas de hausse nette des mentions sur la fenêtre")
+    elif not rise["big_enough"]:
+        reasons.append(
+            f"Hausse trop faible (x{rise['rise_ratio']:.2f}, minimum x{cfg.min_rise_ratio:g})"
+        )
     if not mention_check["progressive"]:
         day = mention_check["worst_day_offset"]
         reasons.append(
@@ -100,8 +145,10 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
         )
 
     price_by_date = {p["date"]: p for p in price_history}
-    dates_needed = [m["date"] for m in mentions_history[-required_days:]]
-    if not all(d in price_by_date for d in dates_needed):
+    all_dates = [m["date"] for m in mentions_history]
+    baseline_dates = all_dates[baseline_slice]
+    window_dates = all_dates[window_slice]
+    if not all(d in price_by_date for d in baseline_dates + window_dates):
         return TickerEvaluation(
             ticker=ticker,
             status="insufficient_price_data",
@@ -112,9 +159,8 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
             price_series=price_history,
         )
 
-    baseline_prices = [price_by_date[d]["close"] for d in dates_needed]
-    baseline_volumes = [price_by_date[d]["volume"] for d in dates_needed]
-    window_dates = [m["date"] for m in mentions_history[-(cfg.window_days + 1):]]
+    baseline_prices = [price_by_date[d]["close"] for d in baseline_dates]
+    baseline_volumes = [price_by_date[d]["volume"] for d in baseline_dates]
     window_prices = [price_by_date[d]["close"] for d in window_dates]
     window_volumes = [price_by_date[d]["volume"] for d in window_dates]
 
@@ -137,9 +183,9 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
     # Progression dans le classement ApeWisdom : rang plus bas = meilleur, donc
     # on travaille sur -rang pour réutiliser le même détecteur "progressif" que
     # pour les mentions (pas de bond de classement en un seul jour).
-    baseline_rank_scores = [-m["rank"] for m in mentions_history[-required_days:]]
-    window_rank_scores = [-m["rank"] for m in mentions_history[-(cfg.window_days + 1):]]
-    rank_check = _is_progressive(window_rank_scores, baseline_rank_scores, cfg.anomaly_sensitivity)
+    rank_check = _is_progressive(
+        smooth_rank_scores[window_slice], smooth_rank_scores[baseline_slice], cfg.anomaly_sensitivity
+    )
 
     if rank_check["net_rise"] <= 0:
         reasons.append("Le classement ApeWisdom ne progresse pas sur la fenêtre")
@@ -153,8 +199,8 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
     def _engagement_ratio(m):
         return (m["upvotes"] / m["mentions"]) if m["mentions"] else 0.0
 
-    baseline_engagement = [_engagement_ratio(m) for m in mentions_history[-required_days:]]
-    window_engagement = [_engagement_ratio(m) for m in mentions_history[-(cfg.window_days + 1):]]
+    baseline_engagement = [_engagement_ratio(m) for m in mentions_history[baseline_slice]]
+    window_engagement = [_engagement_ratio(m) for m in mentions_history[window_slice]]
     engagement_check = _has_no_quality_collapse(
         window_engagement, baseline_engagement, cfg.engagement_sensitivity
     )
@@ -166,7 +212,9 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
         )
 
     qualifies = (
-        mention_check["net_rise"] > 0
+        rise["enough_mentions"]
+        and rise["big_enough"]
+        and mention_check["net_rise"] > 0
         and mention_check["progressive"]
         and rank_check["net_rise"] > 0
         and rank_check["progressive"]
@@ -183,7 +231,7 @@ def evaluate_ticker(mentions_history, price_history, cfg) -> TickerEvaluation:
         reasons=reasons,
         mentions_series=mentions_history,
         price_series=price_history,
-        rank_start=mentions_history[-(cfg.window_days + 1)]["rank"],
+        rank_start=mentions_history[-w]["rank"],
         rank_end=mentions_history[-1]["rank"],
         engagement_window_avg=statistics.mean(window_engagement) if window_engagement else None,
         engagement_baseline_avg=statistics.mean(baseline_engagement) if baseline_engagement else None,
